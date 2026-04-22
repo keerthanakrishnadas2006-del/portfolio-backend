@@ -18,16 +18,17 @@ pool.connect()
 app.post("/contact", async (req, res) => {
   const { name, email, message } = req.body;
   try {
-    await pool.query(
-      "INSERT INTO contacts (name, email, message) VALUES ($1, $2, $3)",
+    const result = await pool.query(
+      "INSERT INTO contacts (name, email, message) VALUES ($1, $2, $3) RETURNING *",
       [name, email, message]
     );
-    res.status(201).send("Contact saved successfully");
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Error saving contact");
+    console.error("Error inserting contact:", err);
+    res.status(500).send("Server error");
   }
 });
+
 
 // ✅ Route to fetch all contacts
 app.get("/contacts", async (req, res) => {
@@ -55,5 +56,5 @@ pool.query(`
     message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
-`).then(() => console.log("Contacts table ready"))
-  .catch(err => console.error(err));
+`);
+
