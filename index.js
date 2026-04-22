@@ -47,3 +47,13 @@ app.listen(5000, () => {
 app.get("/", (req, res) => {
   res.send("Portfolio backend is live 🚀");
 });
+pool.query(`
+  CREATE TABLE IF NOT EXISTS contacts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    email VARCHAR(100),
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`).then(() => console.log("Contacts table ready"))
+  .catch(err => console.error(err));
