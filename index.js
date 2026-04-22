@@ -1,64 +1,46 @@
 const express = require("express");
-const cors = require("cors");
-const mysql = require("mysql2");
-
+const { Pool } = require("pg");
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-
-
-const PORT = process.env.PORT || 5000;
-
-app.get("/", (req, res) => {
-  res.send("Backend is running!");
+// ✅ Connect to Postgres using DATABASE_URL from Render
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false } // required for Render
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+pool.connect()
+  .then(() => console.log("Connected to Postgres"))
+  .catch(err => console.error("Connection error", err));
 
-
-// MySQL connection
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",     // change if your MySQL user is different
-  password: "root",     // add password if you set one
-  database: "portfolio"
-});
-
-db.connect(err => {
-  if (err) throw err;
-  console.log("MySQL connected!");
-});
-
-// Test route
-app.get("/", (req, res) => {
-  res.send("Backend is running!");
-});
-
-// Get projects
-app.get("/projects", (req, res) => {
-  db.query("SELECT * FROM projects", (err, result) => {
-    if (err) throw err;
-    res.json(result);
-  });
-});
-
-// Save contact form
-app.post("/contact", (req, res) => {
+// ✅ Route to save contact form submissions
+app.post("/contact", async (req, res) => {
   const { name, email, message } = req.body;
-  db.query(
-    "INSERT INTO contacts (name, email, message) VALUES (?, ?, ?)",
-    [name, email, message],
-    (err, result) => {
-      if (err) throw err;
-      res.json({ success: true });
-    }
-  );
+  try {
+    await pool.query(
+      "INSERT INTO contacts (name, email, message) VALUES ($1, $2, $3)",
+      [name, email, message]
+    );
+    res.status(201).send("Contact saved successfully");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error saving contact");
+  }
 });
 
+// ✅ Route to fetch all contacts
+app.get("/contacts", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM contacts ORDER BY created_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+});
+
+// ✅ Start server
 app.listen(5000, () => {
-  console.log("Server started on port 5000");
+  console.log("Server running on port 5000");
 });
