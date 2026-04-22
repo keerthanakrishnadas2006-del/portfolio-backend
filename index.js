@@ -1,20 +1,41 @@
 const express = require("express");
+const cors = require("cors");
 const { Pool } = require("pg");
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// ✅ Connect to Postgres using DATABASE_URL from Render
+// ✅ Database connection (Render Postgres)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // required for Render
+  ssl: { rejectUnauthorized: false }
 });
 
-pool.connect()
-  .then(() => console.log("Connected to Postgres"))
-  .catch(err => console.error("Connection error", err));
+// ✅ Create table if not exists
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contacts (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100),
+        email VARCHAR(100),
+        message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log("Contacts table ready ✅");
+  } catch (err) {
+    console.error("Error creating table:", err);
+  }
+})();
 
-// ✅ Route to save contact form submissions
+// ✅ Root route
+app.get("/", (req, res) => {
+  res.send("Portfolio backend is live 🚀");
+});
+
+// ✅ POST /contact → insert new message
 app.post("/contact", async (req, res) => {
   const { name, email, message } = req.body;
   try {
@@ -29,52 +50,7 @@ app.post("/contact", async (req, res) => {
   }
 });
 
-
-
-// ✅ Route to fetch all contacts
-app.get("/contacts", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM contacts ORDER BY created_at DESC");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
-  }
-});
-
-// ✅ Start server
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
-app.get("/", (req, res) => {
-  res.send("Portfolio backend is live 🚀");
-});
-pool.query(`
-  CREATE TABLE IF NOT EXISTS contacts (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    email VARCHAR(100),
-    message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-
-// Insert new contact
-app.post("/contact", async (req, res) => {
-  const { name, email, message } = req.body;
-  try {
-    const result = await pool.query(
-      "INSERT INTO contacts (name, email, message) VALUES ($1, $2, $3) RETURNING *",
-      [name, email, message]
-    );
-    res.json(result.rows[0]); // send back the inserted row
-  } catch (err) {
-    console.error("Error inserting contact:", err);
-    res.status(500).send("Server error");
-  }
-});
-
-// Get all contacts
+// ✅ GET /contacts → fetch all messages
 app.get("/contacts", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM contacts ORDER BY created_at DESC");
@@ -83,4 +59,10 @@ app.get("/contacts", async (req, res) => {
     console.error("Error fetching contacts:", err);
     res.status(500).send("Server error");
   }
+});
+
+// ✅ Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
 });
