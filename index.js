@@ -30,6 +30,7 @@ app.post("/contact", async (req, res) => {
 });
 
 
+
 // ✅ Route to fetch all contacts
 app.get("/contacts", async (req, res) => {
   try {
