@@ -59,3 +59,28 @@ pool.query(`
   )
 `);
 
+// Insert new contact
+app.post("/contact", async (req, res) => {
+  const { name, email, message } = req.body;
+  try {
+    const result = await pool.query(
+      "INSERT INTO contacts (name, email, message) VALUES ($1, $2, $3) RETURNING *",
+      [name, email, message]
+    );
+    res.json(result.rows[0]); // send back the inserted row
+  } catch (err) {
+    console.error("Error inserting contact:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+// Get all contacts
+app.get("/contacts", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM contacts ORDER BY created_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching contacts:", err);
+    res.status(500).send("Server error");
+  }
+});
